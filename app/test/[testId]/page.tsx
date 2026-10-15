@@ -267,6 +267,11 @@ function QuestionCard({
         </div>
       )}
 
+      {/* Quantitative Comparison: optional question text above the two columns */}
+      {isQC && question.questionText && (
+        <RenderMath text={question.questionText} className="block text-gray-900 text-base leading-relaxed" />
+      )}
+
       {/* Quantitative Comparison two-column layout */}
       {isQC && (question.columnA || question.columnB) && (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
