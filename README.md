@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ISEE Digital Practice
 
-## Getting Started
+Timed ISEE Upper Level practice tests and vocabulary drills, driven by a published Google Sheet and embedded on the Hyperspace Tutors site via iframe.
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.local.example .env.local   # then fill in the values
+npm run dev                        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Configuration (`.env.local` locally, Environment Variables on Vercel)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Example |
+|---|---|
+| `NEXT_PUBLIC_SHEET_BASE_URL` | `https://docs.google.com/spreadsheets/d/e/<ID>/pub?output=csv` |
+| `NEXT_PUBLIC_SHEET_TABS` | `Upper Level Practice Test 1=450248709,Upper Level Practice Test 2=1023802230` (tab name = gid) |
+| `NEXT_PUBLIC_VOCAB_TABS` | `Upper Level Vocabulary=2112710087` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+On Vercel, redeploy after changing any variable (they are read at build time).
 
-## Learn More
+## Adjustable settings in code
 
-To learn more about Next.js, take a look at the following resources:
+| File | Setting |
+|---|---|
+| `lib/testVisibility.ts` | Show/hide each practice test |
+| `lib/vocab.ts` | Words per vocab session, show/hide vocab practice |
+| `lib/sheets.ts` | `SHEET_CACHE_SECONDS` (how often the sheet is re-read) |
+| `app/test/[testId]/page.tsx` | RC passage/question split, equation-only text size |
+| `app/vocab/[listId]/page.tsx` | Check Results default, definitions on summary |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Sheet format
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- One tab per test. Columns: `question_num, question_text, option_a–d, column_a, column_b, reading_passage, subsection, section, difficulty, concepts, correct_answer, solution_notes, problem_notes, figure_url`.
+- `section` = `Verbal Reasoning`, `Quantitative Reasoning`, `Reading Comprehension`, `Mathematics Achievement`, plus:
+  - `Reading Passage` rows: `question_num` = passage ID, `question_text` = passage (`||` = line break). RC questions link via `reading_passage`.
+  - `Source` row: `question_text` = citation shown in the footer.
+- Math: wrap LaTeX in `\(...\)` (write `\#` for the `#` operator). Formatting: `<b> <i> <u> <sup> <sub> <br>`; Ctrl+Enter line breaks are kept.
+- Set cells to Plain Text so values like `0.0100` keep their zeros.
 
-## Deploy on Vercel
+## Figures
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `public/figures/README.md`. Put PNGs in `public/figures/` and the file name in `figure_url`.
