@@ -387,6 +387,13 @@ function SolutionAccordion({
 
 // ─── jump panel ──────────────────────────────────────────────────────────────
 
+const SECTION_SHORT: Record<Section, string> = {
+  "Verbal Reasoning": "Verbal",
+  "Quantitative Reasoning": "Quantitative",
+  "Reading Comprehension": "Reading",
+  "Mathematics Achievement": "Math",
+};
+
 function JumpPanel({
   questions,
   currentIndex,
@@ -394,6 +401,10 @@ function JumpPanel({
   answerKey,
   onJump,
   onClose,
+  sections,
+  currentSectionIndex,
+  allQuestions,
+  onJumpSection,
 }: {
   questions: Question[];
   currentIndex: number;
@@ -401,6 +412,10 @@ function JumpPanel({
   answerKey: (q: Question) => string;
   onJump: (index: number) => void;
   onClose: () => void;
+  sections: Section[];
+  currentSectionIndex: number;
+  allQuestions: Question[];
+  onJumpSection: (index: number) => void;
 }) {
   return (
     <>
@@ -418,6 +433,30 @@ function JumpPanel({
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">
             ×
           </button>
+        </div>
+        {/* section row */}
+        <div className="flex flex-wrap gap-1.5 mb-2 pb-2 border-b border-gray-100">
+          {sections.map((sec, i) => {
+            const secQs = allQuestions.filter((q) => q.section === sec);
+            const done = secQs.filter((q) => !!answers[answerKey(q)]).length;
+            const isCurrent = i === currentSectionIndex;
+            return (
+              <button
+                key={sec}
+                onClick={() => onJumpSection(i)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
+                  ${isCurrent
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                  }`}
+              >
+                {SECTION_SHORT[sec] ?? sec}
+                <span className={`ml-1.5 font-normal ${isCurrent ? "text-blue-100" : "text-gray-400"}`}>
+                  {done}/{secQs.length}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pb-1">
           {questions.map((q, i) => {
@@ -589,6 +628,8 @@ function TestPageInner() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [results, setResults] = useState<SectionResult[]>([]);
   const [showJumpPanel, setShowJumpPanel] = useState(false);
+  // Remaining seconds per section, saved when jumping away so the clock resumes on return
+  const sectionTimeLeft = useRef<Partial<Record<Section, number>>>({});
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Setup options
@@ -618,8 +659,8 @@ function TestPageInner() {
   const sectionQuestions = questions.filter((q) => q.section === currentSection);
   const currentQ = sectionQuestions[questionIndex];
 
-  const startTimer = useCallback((section: Section, multiplier: number, clockOn: boolean) => {
-    const totalTime = Math.round(SECTION_TIME[section] * multiplier);
+  const startTimer = useCallback((section: Section, multiplier: number, clockOn: boolean, resumeAt?: number) => {
+    const totalTime = resumeAt ?? Math.round(SECTION_TIME[section] * multiplier);
     setTimeLeft(totalTime);
     if (timerRef.current) clearInterval(timerRef.current);
     if (!clockOn) return; // timer frozen at allocated time
@@ -661,6 +702,17 @@ function TestPageInner() {
   const handlePrev = () => {
     setShowJumpPanel(false);
     if (questionIndex > 0) setQuestionIndex((i) => i - 1);
+  };
+
+  const handleJumpSection = (index: number) => {
+    setShowJumpPanel(false);
+    if (index === sectionIndex) return;
+    sectionTimeLeft.current[currentSection] = timeLeft;
+    const target = sections[index];
+    setSectionIndex(index);
+    setQuestionIndex(0);
+    setPhase("testing");
+    startTimer(target, timeMultiplier, clockEnabled, sectionTimeLeft.current[target]);
   };
 
   const handleJump = (index: number) => {
@@ -897,7 +949,7 @@ function TestPageInner() {
           {/* show results live toggle */}
           <button
             onClick={() => setShowResultsLive((v) => !v)}
-            title={showResultsLive ? "Hide live results" : "Show live results"}
+            title={showResultsLive ? "Hide answer checking" : "Check answers as you go"}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
               showResultsLive
                 ? "bg-green-50 border-green-300 text-green-700"
@@ -908,7 +960,7 @@ function TestPageInner() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>{showResultsLive ? "Live" : "Live"}</span>
+            <span>Check Results</span>
           </button>
           <div className="text-sm text-gray-400">
             {questionIndex + 1} / {sectionQuestions.length}
@@ -953,6 +1005,10 @@ function TestPageInner() {
             answerKey={answerKey}
             onJump={handleJump}
             onClose={() => setShowJumpPanel(false)}
+            sections={sections}
+            currentSectionIndex={sectionIndex}
+            allQuestions={questions}
+            onJumpSection={handleJumpSection}
           />
         )}
 
