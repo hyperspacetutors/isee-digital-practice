@@ -464,7 +464,7 @@ function JumpPanel({
             const isAnswered = !!answers[answerKey(q)];
             return (
               <button
-                key={q.questionNum}
+                key={`${q.section}-${q.questionNum}-${i}`}
                 onClick={() => onJump(i)}
                 className={`w-9 h-9 rounded-lg text-xs font-semibold border transition-all
                   ${isCurrentQ
@@ -557,8 +557,8 @@ function ResultsView({ results }: { results: SectionResult[] }) {
 
               {isOpen && incorrect.length > 0 && (
                 <div className="border-t border-gray-100 divide-y divide-gray-100">
-                  {incorrect.map((res) => (
-                    <div key={res.questionNum} className="px-4 py-3 bg-gray-50">
+                  {incorrect.map((res, i) => (
+                    <div key={`${res.questionNum}-${i}`} className="px-4 py-3 bg-gray-50">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-gray-600">
                           Q{res.questionNum} · {res.subsection}

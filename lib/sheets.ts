@@ -48,7 +48,9 @@ function parseTabConfigs(): TabConfig[] {
         const name = entry.slice(0, eqIdx).trim();
         const gid = entry.slice(eqIdx + 1).trim() || "0";
         return { name, url: `${SHEET_BASE_URL}&gid=${gid}` };
-      });
+      })
+      // Ignore a tab listed twice (same gid) — it would double every question
+      .filter((tab, i, all) => all.findIndex((t) => t.url === tab.url) === i);
   }
   if (SHEET_URL_LEGACY) {
     return [{ name: "", url: SHEET_URL_LEGACY }];
