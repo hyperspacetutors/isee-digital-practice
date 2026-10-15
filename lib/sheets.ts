@@ -1,23 +1,35 @@
 import Papa from "papaparse";
-import { Question, Section } from "./types";
+import { Question, Section, SECTION_ORDER, TestData } from "./types";
 
 // ─── env config ──────────────────────────────────────────────────────────────
 //
 // Multi-tab mode (recommended):
-//   NEXT_PUBLIC_SHEET_BASE_URL  — spreadsheet export base, e.g.
-//     https://docs.google.com/spreadsheets/d/SHEET_ID/export?format=csv
+//   NEXT_PUBLIC_SHEET_BASE_URL  — published CSV base, e.g.
+//     https://docs.google.com/spreadsheets/d/e/LONG_ID/pub?output=csv
 //   NEXT_PUBLIC_SHEET_TABS      — comma-separated "Display Name=gid" pairs, e.g.
 //     Upper Level Practice Test 3=0,Upper Level Practice Test 2=1234567890
-//     (The gid is the number after &gid= in the sheet's browser URL.)
 //     The Display Name becomes the testId for each row unless the row's own
 //     test_id column is non-empty (which lets one tab hold multiple tests).
 //
 // Legacy single-tab mode (backwards-compatible):
 //   NEXT_PUBLIC_SHEET_URL       — full published CSV URL including &gid=
+//
+// ─── sheet row types (by the `section` column) ───────────────────────────────
+//
+//   Verbal Reasoning / Quantitative Reasoning /
+//   Reading Comprehension / Mathematics Achievement  → question rows
+//   Reading Passage → passage rows: question_num = passage ID,
+//                     question_text = passage text (" || " = line break).
+//                     RC questions link to it via their reading_passage column.
+//   Source          → question_text = citation shown in the test footer.
+//   Anything else is ignored.
 
 const SHEET_BASE_URL = process.env.NEXT_PUBLIC_SHEET_BASE_URL ?? "";
 const SHEET_TABS_RAW = process.env.NEXT_PUBLIC_SHEET_TABS ?? "";
 const SHEET_URL_LEGACY = process.env.NEXT_PUBLIC_SHEET_URL ?? "";
+
+const PASSAGE_SECTION = "reading passage";
+const SOURCE_SECTION = "source";
 
 // ─── tab config parsing ───────────────────────────────────────────────────────
 
@@ -27,7 +39,6 @@ interface TabConfig {
 }
 
 function parseTabConfigs(): TabConfig[] {
-  // New multi-tab mode
   if (SHEET_BASE_URL && SHEET_TABS_RAW) {
     return SHEET_TABS_RAW.split(",")
       .map((entry) => entry.trim())
@@ -39,16 +50,23 @@ function parseTabConfigs(): TabConfig[] {
         return { name, url: `${SHEET_BASE_URL}&gid=${gid}` };
       });
   }
-  // Legacy single-URL mode
   if (SHEET_URL_LEGACY) {
     return [{ name: "", url: SHEET_URL_LEGACY }];
   }
   return [];
 }
 
-// ─── fetch helpers ────────────────────────────────────────────────────────────
+// ─── fetch + parse ────────────────────────────────────────────────────────────
 
-async function fetchTabQuestions(tab: TabConfig): Promise<Question[]> {
+const cell = (row: Record<string, string>, key: string) => row[key]?.trim() ?? "";
+
+/** Normalise a passage ID so "1", "1.0" and " 1 " all match. */
+const normId = (id: string) => {
+  const n = Number(id);
+  return id && !Number.isNaN(n) ? String(n) : id.trim().toLowerCase();
+};
+
+async function fetchTab(tab: TabConfig): Promise<Map<string, TestData>> {
   const res = await fetch(tab.url, { next: { revalidate: 3600 } });
   const text = await res.text();
 
@@ -58,56 +76,100 @@ async function fetchTabQuestions(tab: TabConfig): Promise<Question[]> {
     transformHeader: (h) => h.trim(),
   });
 
-  return data.map((row) => ({
-    // Row's own test_id takes priority; fall back to the tab's display name
-    testId: row["test_id"]?.trim() || tab.name,
-    questionNum: parseInt(row["question_num"] ?? "0", 10),
-    questionText: row["question_text"]?.trim() ?? "",
-    optionA: row["option_a"]?.trim() ?? "",
-    optionB: row["option_b"]?.trim() ?? "",
-    optionC: row["option_c"]?.trim() ?? "",
-    optionD: row["option_d"]?.trim() ?? "",
-    columnA: row["column_a"]?.trim() ?? "",
-    columnB: row["column_b"]?.trim() ?? "",
-    passageText: row["passage_text"]?.trim() ?? "",
-    subsection: row["subsection"]?.trim() ?? "",
-    section: row["section"]?.trim() as Section,
-    difficulty: row["difficulty"]?.trim() ?? "",
-    concepts: row["concepts"]?.trim() ?? "",
-    correctAnswer: row["correct_answer"]?.trim().toUpperCase() as "A" | "B" | "C" | "D",
-    solutionNotes: row["solution_notes"]?.trim() ?? "",
-    imageUrl: row["image_url"]?.trim() ?? "",
-  }));
+  const tests = new Map<string, TestData>();
+  const passages = new Map<string, string>(); // `${testId}::${passageId}` → text
+  const getTest = (id: string) => {
+    if (!tests.has(id)) tests.set(id, { questions: [], source: "" });
+    return tests.get(id)!;
+  };
+
+  for (const row of data) {
+    const testId = cell(row, "test_id") || tab.name;
+    const sectionRaw = cell(row, "section");
+    const sectionKey = sectionRaw.toLowerCase();
+
+    if (sectionKey === PASSAGE_SECTION) {
+      passages.set(`${testId}::${normId(cell(row, "question_num"))}`, cell(row, "question_text"));
+      continue;
+    }
+    if (sectionKey === SOURCE_SECTION) {
+      getTest(testId).source = cell(row, "question_text");
+      continue;
+    }
+    if (!SECTION_ORDER.includes(sectionRaw as Section)) continue;
+
+    getTest(testId).questions.push({
+      testId,
+      questionNum: parseInt(cell(row, "question_num") || "0", 10),
+      questionText: cell(row, "question_text"),
+      optionA: cell(row, "option_a"),
+      optionB: cell(row, "option_b"),
+      optionC: cell(row, "option_c"),
+      optionD: cell(row, "option_d"),
+      columnA: cell(row, "column_a"),
+      columnB: cell(row, "column_b"),
+      passageId: cell(row, "reading_passage"),
+      passageText: "",
+      subsection: cell(row, "subsection"),
+      section: sectionRaw as Section,
+      difficulty: cell(row, "difficulty"),
+      concepts: cell(row, "concepts"),
+      correctAnswer: cell(row, "correct_answer").toUpperCase() as "A" | "B" | "C" | "D",
+      solutionNotes: cell(row, "solution_notes"),
+      figureUrl: cell(row, "figure_url"),
+    });
+  }
+
+  // Attach passage text to RC questions by reading_passage ID
+  for (const [testId, test] of tests) {
+    for (const q of test.questions) {
+      if (q.section === "Reading Comprehension" && q.passageId) {
+        q.passageText = passages.get(`${testId}::${normId(q.passageId)}`) ?? "";
+      }
+    }
+  }
+
+  return tests;
 }
 
-// ─── fetch ────────────────────────────────────────────────────────────────────
-// No manual cache here — Next.js deduplicates and revalidates via the
-// { next: { revalidate } } option passed to each fetch() call in fetchTabQuestions.
-
-export async function fetchQuestions(): Promise<Question[]> {
-  const tabs = parseTabConfigs();
-  const results = await Promise.all(tabs.map(fetchTabQuestions));
-  return results.flat();
+// No manual cache — Next.js dedupes and revalidates via { next: { revalidate } }.
+async function fetchAllTests(): Promise<Map<string, TestData>> {
+  const tabs = await Promise.all(parseTabConfigs().map(fetchTab));
+  const merged = new Map<string, TestData>();
+  for (const tab of tabs) {
+    for (const [id, test] of tab) {
+      const existing = merged.get(id);
+      if (existing) {
+        existing.questions.push(...test.questions);
+        existing.source ||= test.source;
+      } else {
+        merged.set(id, test);
+      }
+    }
+  }
+  return merged;
 }
+
+const sortQuestions = (qs: Question[]) =>
+  [...qs].sort((a, b) => {
+    const sA = SECTION_ORDER.indexOf(a.section);
+    const sB = SECTION_ORDER.indexOf(b.section);
+    return sA !== sB ? sA - sB : a.questionNum - b.questionNum;
+  });
 
 export async function fetchTestIds(): Promise<string[]> {
-  const questions = await fetchQuestions();
-  return [...new Set(questions.map((q) => q.testId))].filter(Boolean).sort();
+  const tests = await fetchAllTests();
+  return [...tests.keys()].filter(Boolean).sort();
+}
+
+export async function fetchTest(testId: string): Promise<TestData> {
+  const tests = await fetchAllTests();
+  const test = tests.get(testId);
+  return test
+    ? { questions: sortQuestions(test.questions), source: test.source }
+    : { questions: [], source: "" };
 }
 
 export async function fetchQuestionsForTest(testId: string): Promise<Question[]> {
-  const questions = await fetchQuestions();
-  return questions
-    .filter((q) => q.testId === testId)
-    .sort((a, b) => {
-      const sectionOrder = [
-        "Verbal Reasoning",
-        "Quantitative Reasoning",
-        "Reading Comprehension",
-        "Mathematics Achievement",
-      ];
-      const sA = sectionOrder.indexOf(a.section);
-      const sB = sectionOrder.indexOf(b.section);
-      return sA !== sB ? sA - sB : a.questionNum - b.questionNum;
-    });
+  return (await fetchTest(testId)).questions;
 }

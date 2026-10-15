@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Question, Response, SectionResult, SECTION_ORDER, SECTION_TIME, Section } from "@/lib/types";
+import { Question, Response, SectionResult, SECTION_ORDER, SECTION_TIME, Section, TestData, splitConcepts } from "@/lib/types";
 import { RenderMath } from "@/app/components/RenderMath";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -23,11 +23,8 @@ const QC_OPTIONS: { label: "A" | "B" | "C" | "D"; text: string }[] = [
   { label: "D", text: "The relationship cannot be determined from the information given." },
 ];
 
-// Test source labels — update values as needed
-const TEST_SOURCES: Record<string, string> = {
-  "pt1": "ISEE Upper Level Practice Test 1 — Provided by ERB",
-  "pt2": "ISEE Upper Level Practice Test 2 — Provided by ERB",
-};
+// Passage line breaks: " || " in the sheet (newlines also accepted)
+const splitPassageLines = (text: string) => text.split(/\s*\|\|\s*|\r?\n/);
 
 // ─── sub-components ──────────────────────────────────────────────────────────
 
@@ -64,7 +61,8 @@ function BackToTests() {
 }
 
 function SetupScreen({
-  testId,
+  testName,
+  source,
   sections,
   clockEnabled,
   setClockEnabled,
@@ -74,7 +72,8 @@ function SetupScreen({
   setShowResultsLive,
   onStart,
 }: {
-  testId: string;
+  testName: string;
+  source: string;
   sections: Section[];
   clockEnabled: boolean;
   setClockEnabled: (v: boolean) => void;
@@ -102,7 +101,7 @@ function SetupScreen({
         <div className="bg-white rounded-2xl border border-gray-200 p-8 max-w-md w-full space-y-6 shadow-sm">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900">
-              {TEST_SOURCES[testId]?.split(" — ")[0] ?? `Practice Test`}
+              {testName || "Practice Test"}
             </h2>
             <p className="text-sm text-gray-400 mt-1">
               {sections.length} sections
@@ -181,9 +180,9 @@ function SetupScreen({
         </div>
       </div>
 
-      {TEST_SOURCES[testId] && (
+      {source && (
         <div className="py-3 text-center text-xs text-gray-400 border-t border-gray-100 bg-white">
-          {TEST_SOURCES[testId]}
+          {source}
         </div>
       )}
     </div>
@@ -221,13 +220,13 @@ function QuestionCard({
         <div className="border border-gray-200 rounded-lg overflow-hidden text-sm">
           <div className="bg-gray-100 border-b border-gray-200 px-3 py-1.5">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {question.subsection || "Passage"}
+              {question.passageId ? `Passage ${question.passageId}` : "Passage"}
             </span>
           </div>
           <div className="max-h-72 overflow-y-auto bg-gray-50">
             <table className="w-full border-collapse">
               <tbody>
-                {question.passageText.split(/\r?\n/).map((line, i) =>
+                {splitPassageLines(question.passageText).map((line, i) =>
                   line.trim() ? (
                     <tr key={i}>
                       <td className="text-right pr-3 pl-2 select-none text-gray-400 font-mono text-xs w-8 align-top py-0.5 leading-relaxed">
@@ -248,10 +247,10 @@ function QuestionCard({
       )}
 
       {/* figure / chart image */}
-      {question.imageUrl && (
+      {question.figureUrl && (
         <div className="rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex justify-center p-3">
           <img
-            src={question.imageUrl}
+            src={question.figureUrl}
             alt={`Figure for question ${question.questionNum}`}
             className="max-w-full max-h-64 object-contain"
           />
@@ -365,9 +364,9 @@ function SolutionAccordion({
           )}
           {question.concepts && (
             <div className="flex flex-wrap gap-1 pt-1">
-              {question.concepts.split("|").map((c) => (
+              {splitConcepts(question.concepts).map((c) => (
                 <span key={c} className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                  {c.trim()}
+                  {c}
                 </span>
               ))}
             </div>
@@ -458,9 +457,8 @@ function ResultsView({ results }: { results: SectionResult[] }) {
     r.responses
       .filter((res) => !res.isCorrect)
       .forEach((res) =>
-        res.concepts.split("|").forEach((c) => {
-          const key = c.trim();
-          if (key) conceptCounts[key] = (conceptCounts[key] ?? 0) + 1;
+        splitConcepts(res.concepts).forEach((key) => {
+          conceptCounts[key] = (conceptCounts[key] ?? 0) + 1;
         })
       )
   );
@@ -528,9 +526,9 @@ function ResultsView({ results }: { results: SectionResult[] }) {
                       )}
                       {res.concepts && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {res.concepts.split("|").map((c) => (
+                          {splitConcepts(res.concepts).map((c) => (
                             <span key={c} className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                              {c.trim()}
+                              {c}
                             </span>
                           ))}
                         </div>
@@ -570,10 +568,12 @@ function ResultsView({ results }: { results: SectionResult[] }) {
 type Phase = "loading" | "setup" | "section-intro" | "testing" | "section-end" | "results";
 
 function TestPageInner() {
-  const { testId } = useParams<{ testId: string }>();
+  const { testId: rawTestId } = useParams<{ testId: string }>();
+  const testId = decodeURIComponent(rawTestId);
   const router = useRouter();
 
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [source, setSource] = useState("");
   const [phase, setPhase] = useState<Phase>("loading");
   const [sectionIndex, setSectionIndex] = useState(0);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -590,10 +590,11 @@ function TestPageInner() {
   const [solutionOpen, setSolutionOpen] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/questions?testId=${testId}`)
+    fetch(`/api/questions?testId=${encodeURIComponent(testId)}`)
       .then((r) => r.json())
-      .then((data: Question[]) => {
-        setQuestions(data);
+      .then((data: TestData) => {
+        setQuestions(data.questions);
+        setSource(data.source);
         setPhase("setup");
       });
   }, [testId]);
@@ -701,7 +702,7 @@ function TestPageInner() {
   const answeredInSection = sectionQuestions.filter((q) => !!answers[answerKey(q)]).length;
 
   // Page footer (shown on non-loading phases)
-  const sourceLabel = TEST_SOURCES[testId] ?? null;
+  const sourceLabel = source || null;
 
   // ── render ──────────────────────────────────────────────────────────────────
 
@@ -714,7 +715,8 @@ function TestPageInner() {
   if (phase === "setup") {
     return (
       <SetupScreen
-        testId={testId}
+        testName={testId}
+        source={source}
         sections={sections}
         clockEnabled={clockEnabled}
         setClockEnabled={setClockEnabled}

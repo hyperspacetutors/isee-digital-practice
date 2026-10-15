@@ -14,14 +14,29 @@ export interface Question {
   optionD: string;
   columnA: string;         // Quantitative Comparison: left quantity (LaTeX ok)
   columnB: string;         // Quantitative Comparison: right quantity (LaTeX ok)
-  passageText: string;     // RC passages — same text shared across 6 questions
+  passageId: string;       // RC: value of the sheet's reading_passage column
+  passageText: string;     // RC: joined from the matching "Reading Passage" row; " || " = line break
   subsection: string;      // e.g. "Synonyms", "Word Problems", "Quantitative Comparison"
   section: Section;
   difficulty: string;
-  concepts: string;        // pipe-delimited: "Fractions | Percent | Multi-step"
+  concepts: string;        // comma- or pipe-delimited tags
   correctAnswer: "A" | "B" | "C" | "D";
   solutionNotes: string;
-  imageUrl: string;         // optional figure/chart image (jsDelivr URL); blank if no figure
+  figureUrl: string;       // sheet column figure_url (jsDelivr URL); blank if no figure
+}
+
+/** Everything the test page needs for one test. */
+export interface TestData {
+  questions: Question[];
+  source: string;          // citation from the sheet's "Source" row (blank if none)
+}
+
+/** Split a concepts cell on commas or pipes. */
+export function splitConcepts(concepts: string): string[] {
+  return concepts
+    .split(/[|,]/)
+    .map((c) => c.trim())
+    .filter(Boolean);
 }
 
 export interface Response {
