@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { SHEET_CACHE_SECONDS } from "./sheets";
 
 // ─── Vocabulary practice — config ────────────────────────────────────────────
 //
@@ -49,7 +50,7 @@ export async function fetchVocabList(name: string): Promise<VocabWord[]> {
   if (!SHOW_VOCAB_PRACTICE) return [];
   const tab = parseVocabTabs().find((t) => t.name === name);
   if (!tab) return [];
-  const res = await fetch(tab.url, { next: { revalidate: 3600 } });
+  const res = await fetch(tab.url, { next: { revalidate: SHEET_CACHE_SECONDS } });
   const { data } = Papa.parse<Record<string, string>>(await res.text(), {
     header: true,
     skipEmptyLines: true,

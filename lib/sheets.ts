@@ -29,6 +29,12 @@ const SHEET_BASE_URL = process.env.NEXT_PUBLIC_SHEET_BASE_URL ?? "";
 const SHEET_TABS_RAW = process.env.NEXT_PUBLIC_SHEET_TABS ?? "";
 const SHEET_URL_LEGACY = process.env.NEXT_PUBLIC_SHEET_URL ?? "";
 
+// How long (seconds) a fetched copy of the sheet is reused before re-downloading.
+// Development: 0 = always fresh, so sheet edits show on the next page load.
+// Production: a short cache keeps the site fast; edits appear within this window
+// (Google's "Publish to web" can add up to ~5 min of its own delay).
+export const SHEET_CACHE_SECONDS = process.env.NODE_ENV === "development" ? 0 : 300;
+
 const PASSAGE_SECTION = "reading passage";
 const SOURCE_SECTION = "source";
 
@@ -81,7 +87,7 @@ const normId = (id: string) => {
 };
 
 async function fetchTab(tab: TabConfig): Promise<Map<string, TestData>> {
-  const res = await fetch(tab.url, { next: { revalidate: 3600 } });
+  const res = await fetch(tab.url, { next: { revalidate: SHEET_CACHE_SECONDS } });
   const text = await res.text();
 
   const { data } = Papa.parse<Record<string, string>>(text, {
