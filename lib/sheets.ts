@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import { Question, Section, SECTION_ORDER, TestData } from "./types";
+import { isTestVisible } from "./testVisibility";
 
 // ─── env config ──────────────────────────────────────────────────────────────
 //
@@ -140,6 +141,7 @@ async function fetchAllTests(): Promise<Map<string, TestData>> {
   const merged = new Map<string, TestData>();
   for (const tab of tabs) {
     for (const [id, test] of tab) {
+      if (!isTestVisible(id)) continue; // toggled off in lib/testVisibility.ts
       const existing = merged.get(id);
       if (existing) {
         existing.questions.push(...test.questions);
