@@ -28,7 +28,7 @@ const splitPassageLines = (text: string) => text.split(/\s*\|\|\s*|\r?\n/);
 
 // ─── Reading Comprehension side-by-side layout — adjust here ────────────────
 // Share of the width given to the passage (left); the question gets the rest.
-const RC_PASSAGE_WIDTH_PCT = 60;
+const RC_PASSAGE_WIDTH_PCT = 50;
 // Overall max width of the RC layout (passage + question).
 const RC_LAYOUT_MAX_WIDTH = "1400px";
 // Height of the scrollable passage pane on wide screens (viewport minus header/footer).
