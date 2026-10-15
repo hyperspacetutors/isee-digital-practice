@@ -53,6 +53,9 @@ export async function fetchVocabList(name: string): Promise<VocabWord[]> {
   const { data } = Papa.parse<Record<string, string>>(await res.text(), {
     header: true,
     skipEmptyLines: true,
+    // Keep every cell as the exact text from the sheet: never convert to numbers,
+    // so values like 2.50, 0.10 or 007 display exactly as typed (no rounding/trimming).
+    dynamicTyping: false,
     transformHeader: (h) => h.trim(),
   });
   const c = (r: Record<string, string>, k: string) => r[k]?.trim() ?? "";
