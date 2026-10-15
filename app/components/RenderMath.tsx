@@ -30,22 +30,13 @@ export function formatInline(text: string): string {
     .replace(/\r?\n/g, "<br/>");
 }
 
-/**
- * Small fixes applied to the LaTeX inside \(...\) before rendering:
- *  - a bare "#" (e.g. the ISEE "#x" operator) is a reserved LaTeX character and makes
- *    KaTeX show the raw source in red, so it is escaped to "\#". Already-escaped "\#" is left alone.
- */
-function fixLatex(latex: string): string {
-  return latex.replace(/(?<!\\)#/g, "\\#");
-}
-
 /** Text + \(...\) math + allowed tags → one HTML string. */
 export function renderRich(text: string): string {
   return text
     .split(/(\\[\(][\s\S]*?\\[\)])/g)
     .map((part) =>
       part.startsWith("\\(") && part.endsWith("\\)")
-        ? katex.renderToString(fixLatex(part.slice(2, -2)), { throwOnError: false, output: "html" })
+        ? katex.renderToString(part.slice(2, -2), { throwOnError: false, output: "html" })
         : formatInline(part)
     )
     .join("");
