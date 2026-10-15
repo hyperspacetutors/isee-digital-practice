@@ -63,6 +63,12 @@ function parseTabConfigs(): TabConfig[] {
 
 const cell = (row: Record<string, string>, key: string) => row[key]?.trim() ?? "";
 
+// Figures: a bare file name in figure_url (e.g. "pt1-qr-q2.png") is served from
+// public/figures/. Full URLs (https://..., or paths starting with "/") are used as-is.
+const FIGURE_BASE_PATH = "/figures/";
+const resolveFigureUrl = (value: string) =>
+  !value || /^(https?:)?\/\//i.test(value) || value.startsWith("/") ? value : FIGURE_BASE_PATH + value;
+
 /** Normalise a passage ID so "1", "1.0" and " 1 " all match. */
 const normId = (id: string) => {
   const n = Number(id);
@@ -119,7 +125,7 @@ async function fetchTab(tab: TabConfig): Promise<Map<string, TestData>> {
       concepts: cell(row, "concepts"),
       correctAnswer: cell(row, "correct_answer").toUpperCase() as "A" | "B" | "C" | "D",
       solutionNotes: cell(row, "solution_notes"),
-      figureUrl: cell(row, "figure_url"),
+      figureUrl: resolveFigureUrl(cell(row, "figure_url")),
     });
   }
 
