@@ -67,6 +67,8 @@ async function fetchTabQuestions(tab: TabConfig): Promise<Question[]> {
     optionB: row["option_b"]?.trim() ?? "",
     optionC: row["option_c"]?.trim() ?? "",
     optionD: row["option_d"]?.trim() ?? "",
+    columnA: row["column_a"]?.trim() ?? "",
+    columnB: row["column_b"]?.trim() ?? "",
     passageText: row["passage_text"]?.trim() ?? "",
     subsection: row["subsection"]?.trim() ?? "",
     section: row["section"]?.trim() as Section,
@@ -74,6 +76,7 @@ async function fetchTabQuestions(tab: TabConfig): Promise<Question[]> {
     concepts: row["concepts"]?.trim() ?? "",
     correctAnswer: row["correct_answer"]?.trim().toUpperCase() as "A" | "B" | "C" | "D",
     solutionNotes: row["solution_notes"]?.trim() ?? "",
+    imageUrl: row["image_url"]?.trim() ?? "",
   }));
 }
 

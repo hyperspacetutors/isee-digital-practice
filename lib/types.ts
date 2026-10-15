@@ -12,13 +12,16 @@ export interface Question {
   optionB: string;
   optionC: string;
   optionD: string;
+  columnA: string;         // Quantitative Comparison: left quantity (LaTeX ok)
+  columnB: string;         // Quantitative Comparison: right quantity (LaTeX ok)
   passageText: string;     // RC passages — same text shared across 6 questions
-  subsection: string;      // e.g. "Synonyms", "Word Problems", "Chocolate"
+  subsection: string;      // e.g. "Synonyms", "Word Problems", "Quantitative Comparison"
   section: Section;
   difficulty: string;
   concepts: string;        // pipe-delimited: "Fractions | Percent | Multi-step"
   correctAnswer: "A" | "B" | "C" | "D";
   solutionNotes: string;
+  imageUrl: string;         // optional figure/chart image (jsDelivr URL); blank if no figure
 }
 
 export interface Response {
