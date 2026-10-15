@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { VOCAB_SESSION_SIZE, type VocabWord } from "@/lib/vocab";
+import { RenderMath } from "@/app/components/RenderMath";
 
 // ─── Vocabulary practice — adjust here ───────────────────────────────────────
 // Words per session is VOCAB_SESSION_SIZE in lib/vocab.ts.
@@ -163,7 +164,7 @@ function VocabPracticeInner() {
                     </div>
                   </div>
                   {SHOW_DEFINITIONS_IN_SUMMARY && w.definition && (
-                    <p className="text-xs text-gray-500 mt-1">{w.definition}</p>
+                    <p className="text-xs text-gray-500 mt-1"><RenderMath text={w.definition} /></p>
                   )}
                 </div>
               ))}
@@ -260,7 +261,7 @@ function VocabPracticeInner() {
                 }`}
               >
                 <span className="font-semibold mr-2">{l}.</span>
-                {optionText(w, l)}
+                <RenderMath text={optionText(w, l)} />
               </button>
             );
           })}
@@ -275,7 +276,11 @@ function VocabPracticeInner() {
             >
               {isCorrect ? "Correct" : `Incorrect — answer: ${w.correctAnswer}`}
             </span>
-            {w.definition && <p className="text-sm text-gray-700 leading-relaxed mt-2">{w.definition}</p>}
+            {w.definition && (
+              <p className="text-sm text-gray-700 leading-relaxed mt-2">
+                <RenderMath text={w.definition} />
+              </p>
+            )}
           </div>
         )}
       </div>

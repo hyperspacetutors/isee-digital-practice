@@ -1,47 +1,45 @@
 "use client";
 
 /**
- * RenderMath — renders plain text mixed with inline LaTeX.
+ * RenderMath — renders sheet text with inline LaTeX and simple formatting tags.
  *
- * Convention: wrap LaTeX in \( ... \) in any sheet cell.
- *   Examples:
- *     "\(x^2\)"                    → x²
- *     "Find \(y\) when \(y = 3x^2 + 2\) and \(-3 \leq x \leq 2\)."
- *     "25% of 50"                  → plain text, no delimiters needed
- *     "$1.75"                      → plain text, dollar signs are fine
+ * Math: wrap LaTeX in \( ... \)   e.g. "Find \(y\) when \(y = 3x^2 + 2\)."
+ *   Dollar signs are plain text — only \(...\) triggers math.
  *
- * Dollar signs in text are safe — only \(...\) triggers math rendering.
+ * Formatting tags allowed in any sheet cell (everything else shows as literal text):
+ *   <b> <strong>  bold        <i> <em>  italic       <u>  underline
+ *   <sup> <sub>   super/sub   <br>      line break
+ *   Tags may wrap math:  "<b>\(x = 2\)</b>"
  */
 
 import katex from "katex";
 
-export function RenderMath({
-  text,
-  className,
-}: {
-  text: string;
-  className?: string;
-}) {
+const ALLOWED_TAGS = ["b", "strong", "i", "em", "u", "sup", "sub"];
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** Escape text, then re-enable only the allowed formatting tags (no attributes). */
+export function formatInline(text: string): string {
+  const tagRe = new RegExp(`&lt;(\\/?)(${ALLOWED_TAGS.join("|")})\\s*&gt;`, "gi");
+  return escapeHtml(text)
+    .replace(tagRe, (_, slash: string, tag: string) => `<${slash}${tag.toLowerCase()}>`)
+    .replace(/&lt;br\s*\/?\s*&gt;/gi, "<br/>");
+}
+
+/** Text + \(...\) math + allowed tags → one HTML string. */
+export function renderRich(text: string): string {
+  return text
+    .split(/(\\[\(][\s\S]*?\\[\)])/g)
+    .map((part) =>
+      part.startsWith("\\(") && part.endsWith("\\)")
+        ? katex.renderToString(part.slice(2, -2), { throwOnError: false, output: "html" })
+        : formatInline(part)
+    )
+    .join("");
+}
+
+export function RenderMath({ text, className }: { text: string; className?: string }) {
   if (!text) return null;
-
-  // Split on \( ... \) — the standard LaTeX inline-math delimiter
-  const parts = text.split(/(\\[\(][\s\S]*?\\[\)])/g);
-
-  return (
-    <span className={className}>
-      {parts.map((part, i) => {
-        if (part.startsWith("\\(") && part.endsWith("\\)")) {
-          const latex = part.slice(2, -2);
-          const html = katex.renderToString(latex, {
-            throwOnError: false,
-            output: "html",
-          });
-          return (
-            <span key={i} dangerouslySetInnerHTML={{ __html: html }} />
-          );
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </span>
-  );
+  return <span className={className} dangerouslySetInnerHTML={{ __html: renderRich(text) }} />;
 }

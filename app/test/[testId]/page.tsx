@@ -215,7 +215,9 @@ function PassagePanel({ question }: { question: Question }) {
                   <td className="text-right pr-3 pl-2 select-none text-gray-400 font-mono text-xs w-10 align-top py-0.5 leading-relaxed">
                     {i + 1}
                   </td>
-                  <td className="text-gray-800 text-[15px] leading-relaxed py-0.5 pr-4">{line}</td>
+                  <td className="text-gray-800 text-[15px] leading-relaxed py-0.5 pr-4">
+                    <RenderMath text={line} />
+                  </td>
                 </tr>
               ) : (
                 <tr key={i}>
