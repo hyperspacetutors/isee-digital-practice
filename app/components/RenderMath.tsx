@@ -9,6 +9,7 @@
  * Formatting tags allowed in any sheet cell (everything else shows as literal text):
  *   <b> <strong>  bold        <i> <em>  italic       <u>  underline
  *   <sup> <sub>   super/sub   <br>      line break
+ * Line breaks typed inside a cell (Ctrl+Enter in Google Sheets) are kept too.
  *   Tags may wrap math:  "<b>\(x = 2\)</b>"
  */
 
@@ -24,7 +25,9 @@ export function formatInline(text: string): string {
   const tagRe = new RegExp(`&lt;(\\/?)(${ALLOWED_TAGS.join("|")})\\s*&gt;`, "gi");
   return escapeHtml(text)
     .replace(tagRe, (_, slash: string, tag: string) => `<${slash}${tag.toLowerCase()}>`)
-    .replace(/&lt;br\s*\/?\s*&gt;/gi, "<br/>");
+    .replace(/&lt;br\s*\/?\s*&gt;/gi, "<br/>")
+    // Line breaks typed inside a sheet cell (Ctrl+Enter / Alt+Enter) display as line breaks
+    .replace(/\r?\n/g, "<br/>");
 }
 
 /** Text + \(...\) math + allowed tags → one HTML string. */
