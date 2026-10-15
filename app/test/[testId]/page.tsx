@@ -592,9 +592,15 @@ function TestPageInner() {
   useEffect(() => {
     fetch(`/api/questions?testId=${encodeURIComponent(testId)}`)
       .then((r) => r.json())
-      .then((data: TestData) => {
-        setQuestions(data.questions);
-        setSource(data.source);
+      .then((data: TestData | Question[]) => {
+        // Accept both the current { questions, source } shape and a bare array
+        const qs = Array.isArray(data) ? data : data?.questions;
+        setQuestions(Array.isArray(qs) ? qs : []);
+        setSource(Array.isArray(data) ? "" : data?.source ?? "");
+        setPhase("setup");
+      })
+      .catch(() => {
+        setQuestions([]);
         setPhase("setup");
       });
   }, [testId]);
