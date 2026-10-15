@@ -26,6 +26,15 @@ const QC_OPTIONS: { label: "A" | "B" | "C" | "D"; text: string }[] = [
 // Passage line breaks: " || " in the sheet (newlines also accepted)
 const splitPassageLines = (text: string) => text.split(/\s*\|\|\s*|\r?\n/);
 
+// ─── Equation-only questions — adjust here ──────────────────────────────────
+// When question_text is only math (nothing but \(...\) apart from spaces/punctuation),
+// show it larger so fractions and exponents are readable.
+const ENLARGE_EQUATION_ONLY_QUESTIONS = true;
+const EQUATION_ONLY_SCALE = 1.5; // 1.5 = 150% of normal question text
+
+const isEquationOnly = (text: string) =>
+  /\\\(/.test(text) && !/[A-Za-z0-9]/.test(text.replace(/\\\([\s\S]*?\\\)/g, ""));
+
 // ─── Reading Comprehension side-by-side layout — adjust here ────────────────
 // Share of the width given to the passage (left); the question gets the rest.
 const RC_PASSAGE_WIDTH_PCT = 50;
@@ -293,10 +302,18 @@ function QuestionCard({
       {/* question text */}
       {!isQC && (
         question.questionText ? (
-          <RenderMath
-            text={isSynonym ? question.questionText.toUpperCase() : question.questionText}
-            className="text-gray-900 text-base leading-relaxed"
-          />
+          <span
+            className="text-gray-900 leading-relaxed"
+            style={{
+              // text-base = 1rem; equation-only questions are scaled up from that
+              fontSize:
+                ENLARGE_EQUATION_ONLY_QUESTIONS && isEquationOnly(question.questionText)
+                  ? `${EQUATION_ONLY_SCALE}rem`
+                  : "1rem",
+            }}
+          >
+            <RenderMath text={isSynonym ? question.questionText.toUpperCase() : question.questionText} />
+          </span>
         ) : (
           <p className="text-gray-400 italic text-sm">
             Question {question.questionNum} — refer to the paper test
