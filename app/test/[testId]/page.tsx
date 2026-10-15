@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense, type CSSProperties } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Question, Response, SectionResult, SECTION_ORDER, SECTION_TIME, Section, TestData, splitConcepts } from "@/lib/types";
 import { RenderMath } from "@/app/components/RenderMath";
@@ -25,6 +25,15 @@ const QC_OPTIONS: { label: "A" | "B" | "C" | "D"; text: string }[] = [
 
 // Passage line breaks: " || " in the sheet (newlines also accepted)
 const splitPassageLines = (text: string) => text.split(/\s*\|\|\s*|\r?\n/);
+
+// ─── Reading Comprehension side-by-side layout — adjust here ────────────────
+// Share of the width given to the passage (left); the question gets the rest.
+const RC_PASSAGE_WIDTH_PCT = 60;
+// Overall max width of the RC layout (passage + question).
+const RC_LAYOUT_MAX_WIDTH = "1400px";
+// Height of the scrollable passage pane on wide screens (viewport minus header/footer).
+const RC_PASSAGE_PANE_HEIGHT = "calc(100vh - 150px)";
+// Below this Tailwind breakpoint (lg = 1024px) passage and question stack vertically.
 
 // ─── sub-components ──────────────────────────────────────────────────────────
 
@@ -189,16 +198,46 @@ function SetupScreen({
   );
 }
 
+function PassagePanel({ question }: { question: Question }) {
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden text-sm bg-gray-50 flex flex-col max-h-[45vh] lg:max-h-none lg:[height:var(--rc-passage-h)]">
+      <div className="bg-gray-100 border-b border-gray-200 px-3 py-1.5 flex-shrink-0">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          {question.passageId ? `Passage ${question.passageId}` : "Passage"}
+        </span>
+      </div>
+      <div className="flex-1 overflow-y-auto py-2">
+        <table className="w-full border-collapse">
+          <tbody>
+            {splitPassageLines(question.passageText).map((line, i) =>
+              line.trim() ? (
+                <tr key={i}>
+                  <td className="text-right pr-3 pl-2 select-none text-gray-400 font-mono text-xs w-10 align-top py-0.5 leading-relaxed">
+                    {i + 1}
+                  </td>
+                  <td className="text-gray-800 text-[15px] leading-relaxed py-0.5 pr-4">{line}</td>
+                </tr>
+              ) : (
+                <tr key={i}>
+                  <td colSpan={2} className="py-1.5" />
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function QuestionCard({
   question,
   selected,
   onSelect,
-  showPassage,
 }: {
   question: Question;
   selected: string | null;
   onSelect: (a: "A" | "B" | "C" | "D") => void;
-  showPassage: boolean;
 }) {
   const isQC = question.subsection === "Quantitative Comparison";
 
@@ -215,37 +254,6 @@ function QuestionCard({
 
   return (
     <div className="space-y-4">
-      {/* passage (RC) */}
-      {showPassage && question.passageText && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden text-sm">
-          <div className="bg-gray-100 border-b border-gray-200 px-3 py-1.5">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {question.passageId ? `Passage ${question.passageId}` : "Passage"}
-            </span>
-          </div>
-          <div className="max-h-72 overflow-y-auto bg-gray-50">
-            <table className="w-full border-collapse">
-              <tbody>
-                {splitPassageLines(question.passageText).map((line, i) =>
-                  line.trim() ? (
-                    <tr key={i}>
-                      <td className="text-right pr-3 pl-2 select-none text-gray-400 font-mono text-xs w-8 align-top py-0.5 leading-relaxed">
-                        {i + 1}
-                      </td>
-                      <td className="text-gray-700 leading-relaxed py-0.5 pr-3">{line}</td>
-                    </tr>
-                  ) : (
-                    <tr key={i}>
-                      <td colSpan={2} className="py-1.5" />
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* figure / chart image */}
       {question.figureUrl && (
         <div className="rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex justify-center p-3">
@@ -842,6 +850,35 @@ function TestPageInner() {
   const selected = answers[answerKey(currentQ)] ?? null;
   const warned = clockEnabled && timeLeft <= 5 * 60 && timeLeft > 0;
 
+  // Question header + card + live solution (shared by both layouts)
+  const questionBody = (
+    <>
+      <div className="mb-3 flex items-center gap-2">
+        <span className="text-sm font-semibold text-gray-700">Q{currentQ.questionNum}</span>
+        {currentQ.subsection && (
+          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+            {currentQ.subsection}
+          </span>
+        )}
+        {currentQ.difficulty && (
+          <span className="text-xs text-gray-400">{currentQ.difficulty}</span>
+        )}
+      </div>
+
+      <QuestionCard question={currentQ} selected={selected} onSelect={handleAnswer} />
+
+      {/* solution accordion — visible when showResultsLive and question is answered */}
+      {showResultsLive && selected !== null && (
+        <SolutionAccordion
+          question={currentQ}
+          selected={selected}
+          open={solutionOpen}
+          onToggle={() => setSolutionOpen((v) => !v)}
+        />
+      )}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* header */}
@@ -884,37 +921,26 @@ function TestPageInner() {
         <ProgressBar current={questionIndex + 1} total={sectionQuestions.length} />
       </div>
 
-      {/* question */}
-      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="text-sm font-semibold text-gray-700">Q{currentQ.questionNum}</span>
-          {currentQ.subsection && (
-            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-              {currentQ.subsection}
-            </span>
-          )}
-          {currentQ.difficulty && (
-            <span className="text-xs text-gray-400">{currentQ.difficulty}</span>
-          )}
+      {/* question (side-by-side with passage for RC) */}
+      {showPassage ? (
+        <div
+          className="flex-1 w-full mx-auto p-4 grid grid-cols-1 gap-6 items-start lg:[grid-template-columns:var(--rc-cols)]"
+          style={{
+            maxWidth: RC_LAYOUT_MAX_WIDTH,
+            "--rc-cols": `minmax(0, ${RC_PASSAGE_WIDTH_PCT}fr) minmax(0, ${100 - RC_PASSAGE_WIDTH_PCT}fr)`,
+            "--rc-passage-h": RC_PASSAGE_PANE_HEIGHT,
+          } as CSSProperties}
+        >
+          <PassagePanel key={currentQ.passageId} question={currentQ} />
+          <div className="min-w-0">
+            {questionBody}
+          </div>
         </div>
-
-        <QuestionCard
-          question={currentQ}
-          selected={selected}
-          onSelect={handleAnswer}
-          showPassage={showPassage}
-        />
-
-        {/* solution accordion — visible when showResultsLive and question is answered */}
-        {showResultsLive && selected !== null && (
-          <SolutionAccordion
-            question={currentQ}
-            selected={selected}
-            open={solutionOpen}
-            onToggle={() => setSolutionOpen((v) => !v)}
-          />
-        )}
-      </div>
+      ) : (
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
+          {questionBody}
+        </div>
+      )}
 
       {/* footer nav — relative so the jump panel can anchor to it */}
       <div className="bg-white border-t border-gray-200 px-4 py-3 sticky bottom-0 relative">
