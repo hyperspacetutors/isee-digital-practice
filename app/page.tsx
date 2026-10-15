@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { fetchTestIds, fetchQuestionsForTest } from "@/lib/sheets";
 import { SECTION_ORDER } from "@/lib/types";
+import { fetchVocabListNames, fetchVocabList, VOCAB_SESSION_SIZE } from "@/lib/vocab";
 
 export default async function Home() {
   const testIds = await fetchTestIds();
@@ -15,6 +16,10 @@ export default async function Home() {
       }));
       return { id, total: questions.length, bySection };
     })
+  );
+
+  const vocabLists = await Promise.all(
+    fetchVocabListNames().map(async (name) => ({ name, count: (await fetchVocabList(name)).length }))
   );
 
   return (
@@ -48,6 +53,24 @@ export default async function Home() {
             </Link>
           ))}
         </div>
+
+        {vocabLists.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Vocabulary Practice</h2>
+            <div className="space-y-4">
+              {vocabLists.map(({ name, count }) => (
+                <Link key={name} href={`/vocab/${encodeURIComponent(name)}`}>
+                  <div className="bg-white rounded-xl border border-gray-200 p-6 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800">{name}</h3>
+                    <span className="text-sm text-gray-400">
+                      {Math.min(VOCAB_SESSION_SIZE, count)} random words · {count} in list
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {testIds.length === 0 && (
           <div className="text-center py-16 text-gray-400">
