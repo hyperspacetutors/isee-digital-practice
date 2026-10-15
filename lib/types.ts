@@ -22,7 +22,8 @@ export interface Question {
   concepts: string;        // comma- or pipe-delimited tags
   correctAnswer: "A" | "B" | "C" | "D";
   solutionNotes: string;
-  figureUrl: string;       // sheet column figure_url (jsDelivr URL); blank if no figure
+  figureUrl: string;       // sheet column figure_url, resolved to /figures/<name> or a full URL
+  optionImages: boolean;   // problem_notes contains "ANS FIG" → option_a–d are image references
 }
 
 /** Everything the test page needs for one test. */

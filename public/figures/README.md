@@ -16,9 +16,11 @@ Changed an image but the browser still shows the old one? Hard-refresh (Ctrl+Shi
 
 ## Image answer choices
 
-To make an answer choice a picture, put the image file name in that `option_a`–`option_d` cell instead of text,
-e.g. `ulpt4_qr_18a.png`. Include the extension (`.png`, `.jpg`, `.gif`, `.svg`, `.webp`) — without it the cell is treated as text.
-Full `https://...` image links also work. Text and image choices can be mixed in one question.
+To make a question's answer choices pictures:
+1. Put **`ANS FIG`** in that row's `problem_notes` cell (it can sit alongside other notes, e.g. `ADD FIG, ANS FIG`).
+2. Put an image file name in each of `option_a`–`option_d`, e.g. `ulpt4_qr_18a`, `ulpt4_qr_18b`, ...
+   Same rules as `figure_url`: `.png` is assumed if you leave off the extension; full `https://...` links also work.
+3. Save the images in this folder.
 
 ## Checklist (62 figures from `problem_notes = ADD FIG`, read from the live sheet Oct 15, 2026)
 

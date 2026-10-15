@@ -1,7 +1,7 @@
 import Papa from "papaparse";
 import { Question, Section, SECTION_ORDER, TestData } from "./types";
 import { TESTS, tabCsvUrl } from "./sheetConfig";
-import { resolveFigureUrl } from "./figures";
+import { resolveFigureUrl, ANSWER_FIGURE_MARKER } from "./figures";
 
 // Which tabs to load (and their names/order/visibility) is set in lib/sheetConfig.ts.
 //
@@ -104,6 +104,7 @@ async function fetchTab(tab: TabConfig): Promise<Map<string, TestData>> {
       correctAnswer: cell(row, "correct_answer").toUpperCase() as "A" | "B" | "C" | "D",
       solutionNotes: cell(row, "solution_notes"),
       figureUrl: resolveFigureUrl(cell(row, "figure_url")),
+      optionImages: ANSWER_FIGURE_MARKER.test(cell(row, "problem_notes")),
     });
   }
 
