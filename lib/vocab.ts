@@ -1,12 +1,10 @@
 import Papa from "papaparse";
 import { SHEET_CACHE_SECONDS } from "./sheets";
+import { VOCAB_LISTS, tabCsvUrl } from "./sheetConfig";
 
 // ─── Vocabulary practice — config ────────────────────────────────────────────
 //
-// .env.local:
-//   NEXT_PUBLIC_VOCAB_TABS — comma-separated "Display Name=gid" pairs, e.g.
-//     Upper Level Vocabulary=2112710087
-//   Uses the same NEXT_PUBLIC_SHEET_BASE_URL as the practice tests.
+// Which vocab tabs to load is set in lib/sheetConfig.ts (VOCAB_LISTS).
 //
 // Sheet columns: word, option_a, option_b, option_c, option_d, definition,
 //                correct_answer, flag
@@ -15,8 +13,6 @@ import { SHEET_CACHE_SECONDS } from "./sheets";
 export const VOCAB_SESSION_SIZE = 20;
 /** Skip words whose `flag` column is non-empty (e.g. mark words to retire). */
 export const VOCAB_EXCLUDE_FLAGGED = true;
-/** Show the vocabulary practice card(s) on the home page. */
-export const SHOW_VOCAB_PRACTICE = true;
 
 export interface VocabWord {
   word: string;
@@ -28,26 +24,15 @@ export interface VocabWord {
   correctAnswer: "A" | "B" | "C" | "D";
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_SHEET_BASE_URL ?? "";
-const VOCAB_TABS_RAW = process.env.NEXT_PUBLIC_VOCAB_TABS ?? "";
-
 function parseVocabTabs(): { name: string; url: string }[] {
-  if (!BASE_URL || !VOCAB_TABS_RAW) return [];
-  return VOCAB_TABS_RAW.split(",")
-    .map((e) => e.trim())
-    .filter(Boolean)
-    .map((e) => {
-      const i = e.lastIndexOf("=");
-      return { name: e.slice(0, i).trim(), url: `${BASE_URL}&gid=${e.slice(i + 1).trim() || "0"}` };
-    });
+  return VOCAB_LISTS.filter((t) => t.visible).map((t) => ({ name: t.name.trim(), url: tabCsvUrl(t) }));
 }
 
 export function fetchVocabListNames(): string[] {
-  return SHOW_VOCAB_PRACTICE ? parseVocabTabs().map((t) => t.name) : [];
+  return parseVocabTabs().map((t) => t.name);
 }
 
 export async function fetchVocabList(name: string): Promise<VocabWord[]> {
-  if (!SHOW_VOCAB_PRACTICE) return [];
   const tab = parseVocabTabs().find((t) => t.name === name);
   if (!tab) return [];
   const res = await fetch(tab.url, { next: { revalidate: SHEET_CACHE_SECONDS } });

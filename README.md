@@ -6,29 +6,23 @@ Timed ISEE Upper Level practice tests and vocabulary drills, driven by a publish
 
 ```bash
 npm install
-cp .env.local.example .env.local   # then fill in the values
-npm run dev                        # http://localhost:3000
+npm run dev        # http://localhost:3000
 ```
 
-## Configuration (`.env.local` locally, Environment Variables on Vercel)
+No environment variables are needed. Vercel deploys automatically on every push to `main`.
 
-| Variable | Example |
-|---|---|
-| `NEXT_PUBLIC_SHEET_BASE_URL` | `https://docs.google.com/spreadsheets/d/e/<ID>/pub?output=csv` |
-| `NEXT_PUBLIC_SHEET_TABS` | `Upper Level Practice Test 1=450248709,Upper Level Practice Test 2=1023802230` (tab name = gid) |
-| `NEXT_PUBLIC_VOCAB_TABS` | `Upper Level Vocabulary=2112710087` |
-
-On Vercel, redeploy after changing any variable (they are read at build time).
-
-## Adjustable settings in code
+## Settings (edit, commit, push)
 
 | File | Setting |
 |---|---|
-| `lib/testVisibility.ts` | Show/hide each practice test |
-| `lib/vocab.ts` | Words per vocab session, show/hide vocab practice |
+| `lib/sheetConfig.ts` | Sheet address; list of tests and vocab lists (name, tab gid, visible, order) |
+| `lib/vocab.ts` | Words per vocab session, skip flagged words |
 | `lib/sheets.ts` | `SHEET_CACHE_SECONDS` (how often the sheet is re-read) |
 | `app/test/[testId]/page.tsx` | RC passage/question split, equation-only text size |
 | `app/vocab/[listId]/page.tsx` | Check Results default, definitions on summary |
+
+To add a test: add a tab to the sheet, then add `{ name, gid, visible: true }` to `TESTS` in `lib/sheetConfig.ts` and push.
+The gid is the number after `#gid=` in the browser address bar when that tab is open.
 
 ## Sheet format
 

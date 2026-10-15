@@ -90,7 +90,7 @@ async function TestCatalog() {
         {testIds.length === 0 && (
           <div className="text-center py-16 text-gray-400">
             <p className="text-lg">No tests found.</p>
-            <p className="text-sm mt-1">Make sure your Google Sheet URL is set in <code>.env.local</code>.</p>
+            <p className="text-sm mt-1">Check SHEET_BASE_URL and TESTS in <code>lib/sheetConfig.ts</code>.</p>
           </div>
         )}
     </>

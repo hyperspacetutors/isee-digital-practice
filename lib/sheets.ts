@@ -1,19 +1,8 @@
 import Papa from "papaparse";
 import { Question, Section, SECTION_ORDER, TestData } from "./types";
-import { isTestVisible } from "./testVisibility";
+import { TESTS, tabCsvUrl } from "./sheetConfig";
 
-// ─── env config ──────────────────────────────────────────────────────────────
-//
-// Multi-tab mode (recommended):
-//   NEXT_PUBLIC_SHEET_BASE_URL  — published CSV base, e.g.
-//     https://docs.google.com/spreadsheets/d/e/LONG_ID/pub?output=csv
-//   NEXT_PUBLIC_SHEET_TABS      — comma-separated "Display Name=gid" pairs, e.g.
-//     Upper Level Practice Test 3=0,Upper Level Practice Test 2=1234567890
-//     The Display Name becomes the testId for each row unless the row's own
-//     test_id column is non-empty (which lets one tab hold multiple tests).
-//
-// Legacy single-tab mode (backwards-compatible):
-//   NEXT_PUBLIC_SHEET_URL       — full published CSV URL including &gid=
+// Which tabs to load (and their names/order/visibility) is set in lib/sheetConfig.ts.
 //
 // ─── sheet row types (by the `section` column) ───────────────────────────────
 //
@@ -25,10 +14,6 @@ import { isTestVisible } from "./testVisibility";
 //   Source          → question_text = citation shown in the test footer.
 //   Anything else is ignored.
 
-const SHEET_BASE_URL = process.env.NEXT_PUBLIC_SHEET_BASE_URL ?? "";
-const SHEET_TABS_RAW = process.env.NEXT_PUBLIC_SHEET_TABS ?? "";
-const SHEET_URL_LEGACY = process.env.NEXT_PUBLIC_SHEET_URL ?? "";
-
 // How long (seconds) a fetched copy of the sheet is reused before re-downloading.
 // Development: 0 = always fresh, so sheet edits show on the next page load.
 // Production: a short cache keeps the site fast; edits appear within this window
@@ -38,31 +23,18 @@ export const SHEET_CACHE_SECONDS = process.env.NODE_ENV === "development" ? 0 : 
 const PASSAGE_SECTION = "reading passage";
 const SOURCE_SECTION = "source";
 
-// ─── tab config parsing ───────────────────────────────────────────────────────
+// ─── tab config ───────────────────────────────────────────────────────────────
 
 interface TabConfig {
-  name: string; // used as testId fallback
+  name: string; // used as testId unless a row has its own test_id
   url: string;
 }
 
 function parseTabConfigs(): TabConfig[] {
-  if (SHEET_BASE_URL && SHEET_TABS_RAW) {
-    return SHEET_TABS_RAW.split(",")
-      .map((entry) => entry.trim())
-      .filter(Boolean)
-      .map((entry) => {
-        const eqIdx = entry.lastIndexOf("=");
-        const name = entry.slice(0, eqIdx).trim();
-        const gid = entry.slice(eqIdx + 1).trim() || "0";
-        return { name, url: `${SHEET_BASE_URL}&gid=${gid}` };
-      })
-      // Ignore a tab listed twice (same gid) — it would double every question
-      .filter((tab, i, all) => all.findIndex((t) => t.url === tab.url) === i);
-  }
-  if (SHEET_URL_LEGACY) {
-    return [{ name: "", url: SHEET_URL_LEGACY }];
-  }
-  return [];
+  return TESTS.filter((t) => t.visible)
+    .map((t) => ({ name: t.name.trim(), url: tabCsvUrl(t) }))
+    // Ignore a tab listed twice (same gid) — it would double every question
+    .filter((tab, i, all) => all.findIndex((t) => t.url === tab.url) === i);
 }
 
 // ─── fetch + parse ────────────────────────────────────────────────────────────
@@ -161,7 +133,6 @@ async function fetchAllTests(): Promise<Map<string, TestData>> {
   const merged = new Map<string, TestData>();
   for (const tab of tabs) {
     for (const [id, test] of tab) {
-      if (!isTestVisible(id)) continue; // toggled off in lib/testVisibility.ts
       const existing = merged.get(id);
       if (existing) {
         existing.questions.push(...test.questions);
@@ -181,9 +152,12 @@ const sortQuestions = (qs: Question[]) =>
     return sA !== sB ? sA - sB : a.questionNum - b.questionNum;
   });
 
+/** Test names in the order listed in lib/sheetConfig.ts (extra test_id values after). */
 export async function fetchTestIds(): Promise<string[]> {
   const tests = await fetchAllTests();
-  return [...tests.keys()].filter(Boolean).sort();
+  const order = TESTS.map((t) => t.name.trim());
+  const rank = (id: string) => (order.indexOf(id) === -1 ? order.length : order.indexOf(id));
+  return [...tests.keys()].filter(Boolean).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
 }
 
 export async function fetchTest(testId: string): Promise<TestData> {

@@ -88,7 +88,7 @@ function VocabPracticeInner() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-2 text-gray-500">
         <p>No vocabulary words found for “{listName}”.</p>
-        <p className="text-xs text-gray-400">Check NEXT_PUBLIC_VOCAB_TABS in .env.local.</p>
+        <p className="text-xs text-gray-400">Check VOCAB_LISTS in lib/sheetConfig.ts.</p>
         <BackToHome />
       </div>
     );
