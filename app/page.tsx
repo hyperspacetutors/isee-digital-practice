@@ -1,9 +1,30 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { connection } from "next/server";
 import { fetchTestIds, fetchQuestionsForTest } from "@/lib/sheets";
 import { SECTION_ORDER } from "@/lib/types";
 import { fetchVocabListNames, fetchVocabList, VOCAB_SESSION_SIZE } from "@/lib/vocab";
 
-export default async function Home() {
+export default function Home() {
+  return (
+    <main className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-gray-900">ISEE Practice</h1>
+          <p className="text-gray-500 mt-1">Upper Level — Select a practice test to begin</p>
+        </div>
+        <Suspense fallback={<p className="text-center py-16 text-gray-400">Loading tests…</p>}>
+          <TestCatalog />
+        </Suspense>
+      </div>
+    </main>
+  );
+}
+
+// Reads the live sheet on each request (see SHEET_CACHE_SECONDS), so it renders
+// at request time rather than being prerendered — hence connection() + Suspense.
+async function TestCatalog() {
+  await connection();
   const testIds = await fetchTestIds();
 
   // Fetch section counts for each test for the summary cards
@@ -23,13 +44,7 @@ export default async function Home() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-gray-900">ISEE Practice</h1>
-          <p className="text-gray-500 mt-1">Upper Level — Select a practice test to begin</p>
-        </div>
-
+    <>
         <div className="space-y-4">
           {testSummaries.map(({ id, total, bySection }) => (
             <Link key={id} href={`/test/${id}`}>
@@ -78,7 +93,6 @@ export default async function Home() {
             <p className="text-sm mt-1">Make sure your Google Sheet URL is set in <code>.env.local</code>.</p>
           </div>
         )}
-      </div>
-    </main>
+    </>
   );
 }
