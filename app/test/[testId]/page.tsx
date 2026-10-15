@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, Suspense, type CSSProperties 
 import { useParams, useRouter } from "next/navigation";
 import { Question, Response, SectionResult, SECTION_ORDER, SECTION_TIME, Section, TestData, splitConcepts } from "@/lib/types";
 import { RenderMath } from "@/app/components/RenderMath";
+import { isImageRef, resolveFigureUrl } from "@/lib/figures";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ function SetupScreen({
           {/* Show results live */}
           <div className="flex items-center justify-between py-3">
             <div>
-              <p className="text-sm font-medium text-gray-800">Show results live</p>
+              <p className="text-sm font-medium text-gray-800">Check Results</p>
               <p className="text-xs text-gray-400">See correct answers and solution notes as you go</p>
             </div>
             <button
@@ -334,8 +335,17 @@ function QuestionCard({
                     : "border-gray-200 bg-white text-gray-700 hover:border-gray-400"
                   }`}
               >
-                <span className="font-semibold mr-2">{label}.</span>
-                <RenderMath text={text} />
+                <span className="font-semibold mr-2 align-top">{label}.</span>
+                {isImageRef(text) ? (
+                  // Image answer choice: option cell holds an image file name or URL
+                  <img
+                    src={resolveFigureUrl(text.trim())}
+                    alt={`Answer choice ${label}`}
+                    className="inline-block align-top max-w-full max-h-40 object-contain"
+                  />
+                ) : (
+                  <RenderMath text={text} />
+                )}
               </button>
             ))
           : ANSWER_LABELS.map((label) => (

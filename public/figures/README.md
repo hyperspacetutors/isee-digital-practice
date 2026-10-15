@@ -14,6 +14,12 @@ Images for questions that need a chart, diagram or graph. The app serves this fo
 
 Changed an image but the browser still shows the old one? Hard-refresh (Ctrl+Shift+R).
 
+## Image answer choices
+
+To make an answer choice a picture, put the image file name in that `option_a`–`option_d` cell instead of text,
+e.g. `ulpt4_qr_18a.png`. Include the extension (`.png`, `.jpg`, `.gif`, `.svg`, `.webp`) — without it the cell is treated as text.
+Full `https://...` image links also work. Text and image choices can be mixed in one question.
+
 ## Checklist (62 figures from `problem_notes = ADD FIG`, read from the live sheet Oct 15, 2026)
 
 Descriptions come from the question text; check each against the source PDF.

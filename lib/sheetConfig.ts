@@ -23,7 +23,7 @@ export const TESTS: SheetTab[] = [
   { name: "Upper Level Practice Test 1", gid: "450248709", visible: false },
   { name: "Upper Level Practice Test 2", gid: "1023802230", visible: false },
   { name: "Upper Level Practice Test 3", gid: "0", visible: true },
-  { name: "Upper Level Practice Test 4", gid: "1607191292", visible: false },
+  { name: "Upper Level Practice Test 4", gid: "1607191292", visible: true },
 ];
 
 export const VOCAB_LISTS: SheetTab[] = [
