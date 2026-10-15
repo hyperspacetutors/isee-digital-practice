@@ -152,7 +152,7 @@ function VocabPracticeInner() {
               {missed.map(({ w, i }) => (
                 <div key={`${w.word}-${i}`} className="px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-gray-800 uppercase tracking-wide text-sm">{w.word}</span>
+                    <span className="font-semibold text-gray-800 tracking-wide text-sm">{w.word.toUpperCase()}</span>
                     <div className="flex gap-3 text-xs">
                       <span className="text-red-500">
                         You: {answers[i] ? `${answers[i]}. ${optionText(w, answers[i])}` : "—"}
@@ -239,7 +239,7 @@ function VocabPracticeInner() {
           <span className="text-sm font-semibold text-gray-700">Q{index + 1}</span>
           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Synonyms</span>
         </div>
-        <p className="text-gray-900 text-base font-semibold uppercase tracking-wide mb-4">{w.word}</p>
+        <p className="text-gray-900 text-base font-semibold tracking-wide mb-4">{w.word.toUpperCase()}</p>
         <div className="space-y-2 pt-1">
           {LETTERS.map((l) => {
             const isSel = selected === l;

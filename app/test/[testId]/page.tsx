@@ -240,6 +240,8 @@ function QuestionCard({
   onSelect: (a: "A" | "B" | "C" | "D") => void;
 }) {
   const isQC = question.subsection === "Quantitative Comparison";
+  // Vocab (synonym) questions show the stem word in all caps, like the real test
+  const isSynonym = question.subsection.toLowerCase() === "synonyms";
 
   const options: { label: "A" | "B" | "C" | "D"; text: string }[] = isQC
     ? QC_OPTIONS
@@ -284,7 +286,10 @@ function QuestionCard({
       {/* question text */}
       {!isQC && (
         question.questionText ? (
-          <RenderMath text={question.questionText} className="text-gray-900 text-base leading-relaxed" />
+          <RenderMath
+            text={isSynonym ? question.questionText.toUpperCase() : question.questionText}
+            className="text-gray-900 text-base leading-relaxed"
+          />
         ) : (
           <p className="text-gray-400 italic text-sm">
             Question {question.questionNum} — refer to the paper test
