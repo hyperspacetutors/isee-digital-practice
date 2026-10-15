@@ -66,8 +66,13 @@ const cell = (row: Record<string, string>, key: string) => row[key]?.trim() ?? "
 // Figures: a bare file name in figure_url (e.g. "pt1-qr-q2.png") is served from
 // public/figures/. Full URLs (https://..., or paths starting with "/") are used as-is.
 const FIGURE_BASE_PATH = "/figures/";
-const resolveFigureUrl = (value: string) =>
-  !value || /^(https?:)?\/\//i.test(value) || value.startsWith("/") ? value : FIGURE_BASE_PATH + value;
+// A name with no extension gets ".png" added (e.g. "ulpt3_qr_14" → "/figures/ulpt3_qr_14.png").
+const FIGURE_DEFAULT_EXT = ".png";
+const resolveFigureUrl = (value: string) => {
+  if (!value || /^(https?:)?\/\//i.test(value) || value.startsWith("/")) return value;
+  const name = /\.[a-z0-9]{2,5}$/i.test(value) ? value : value + FIGURE_DEFAULT_EXT;
+  return FIGURE_BASE_PATH + name;
+};
 
 /** Normalise a passage ID so "1", "1.0" and " 1 " all match. */
 const normId = (id: string) => {

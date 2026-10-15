@@ -5,10 +5,10 @@ Images for questions that need a chart, diagram or graph. The app serves this fo
 ## How to add a figure
 
 1. Screenshot the figure from the source PDF. Crop tightly (no question text), save as **PNG**.
-2. Name it `<test>-<section>-q<num>.png`, all lowercase — e.g. `pt1-qr-q2.png`, `pt4-ma-q39.png`.
+2. Name it consistently, e.g. `ulpt3_qr_14.png` (upper level, test, section, question) or `ulpt3_qr_4-5.png` for a shared figure.
    Sections: `vr`, `qr`, `rc`, `ma`. Questions that share one figure can share one file (put the same name in each row).
 3. Save it in this folder (`public/figures/`).
-4. In the Google Sheet, put **just the file name** in that row's `figure_url` cell (e.g. `pt1-qr-q2.png`).
+4. In the Google Sheet, put **just the file name** in that row's `figure_url` cell (e.g. `ulpt3_qr_14.png`). If you leave off the extension, `.png` is assumed.
    The app turns a bare file name into `/figures/<name>`. A full `https://...` URL also works and is used as-is.
 5. Commit and push, so the image goes live wherever the app is hosted.
 
